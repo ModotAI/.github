@@ -1,10 +1,8 @@
 <p align="center">
-  <img src="https://things-ai.org/img/og-image.png" width="600" />
+  <img src="https://things-ai.org/img/github.png" width="600" />
 </p>
 
-## ModotAI
-
-Independent AI research lab building sovereign models from scratch — no fine-tuning, no distillation, no cloud dependency.
+Independent AI research lab building sovereign models from scratch.
 
 ### Models
 
