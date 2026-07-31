@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://things-ai.org/img/github.png" width="600" />
+  <img src="https://things-ai.org/img/github.png" width="300" />
 </p>
 
 Independent AI research lab building sovereign models from scratch.
