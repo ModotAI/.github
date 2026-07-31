@@ -2,7 +2,7 @@
   <img src="https://things-ai.org/img/github.png" width="600" />
 </p>
 
-Independent AI research lab building sovereign models from scratch — no fine-tuning, no distillation, no cloud dependency.
+Independent AI research lab building sovereign models from scratch, no cloud dependency.
 
 ### Models
 
