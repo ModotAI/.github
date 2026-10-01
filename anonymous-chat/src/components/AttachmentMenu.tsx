@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, Pressable, Modal } from "react-native";
+import { View, Text, StyleSheet, Pressable, Modal, Animated } from "react-native";
+import { useEffect, useRef } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -30,6 +31,15 @@ export function AttachmentMenu({
   onSticker,
 }: AttachmentMenuProps) {
   const { colors } = useTheme();
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(slideAnim, {
+      toValue: visible ? 1 : 0,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  }, [visible, slideAnim]);
 
   const handlers: Record<string, () => void> = {
     onCamera,
@@ -39,29 +49,46 @@ export function AttachmentMenu({
     onSticker,
   };
 
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={onClose}>
-        <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
-          <View style={styles.handle} />
-          <View style={styles.grid}>
-            {ITEMS.map((item) => (
-              <Pressable
-                key={item.key}
-                style={styles.item}
-                onPress={() => {
-                  handlers[item.handler]();
-                  onClose();
-                }}
-              >
-                <View style={[styles.iconCircle, { backgroundColor: item.color }]}>
-                  <Ionicons name={item.icon as any} size={24} color="#ffffff" />
-                </View>
-                <Text style={[styles.label, { color: colors.text }]}>{item.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+    <Modal visible transparent animationType="none" onRequestClose={onClose}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Animated.View
+          style={[
+            styles.sheet,
+            { backgroundColor: colors.surface },
+            {
+              transform: [{
+                translateY: slideAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [300, 0],
+                }),
+              }],
+            },
+          ]}
+        >
+          <Pressable>
+            <View style={styles.handle} />
+            <View style={styles.grid}>
+              {ITEMS.map((item) => (
+                <Pressable
+                  key={item.key}
+                  style={styles.item}
+                  onPress={() => {
+                    onClose();
+                    setTimeout(() => handlers[item.handler](), 300);
+                  }}
+                >
+                  <View style={[styles.iconCircle, { backgroundColor: item.color }]}>
+                    <Ionicons name={item.icon as any} size={24} color="#ffffff" />
+                  </View>
+                  <Text style={[styles.label, { color: colors.text }]}>{item.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </Pressable>
+        </Animated.View>
       </Pressable>
     </Modal>
   );
