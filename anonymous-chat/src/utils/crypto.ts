@@ -1,11 +1,11 @@
-import { v4 as uuidv4 } from "uuid";
+import * as ExpoCrypto from "expo-crypto";
 
 export function generateId(): string {
-  return uuidv4();
+  return ExpoCrypto.randomUUID();
 }
 
 export function generateUserId(): string {
-  return `anon_${uuidv4().replace(/-/g, "").slice(0, 16)}`;
+  return `anon_${ExpoCrypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
 }
 
 export function generateChatId(userId1: string, userId2: string): string {
