@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useTheme } from "@/hooks/useTheme";
@@ -8,12 +9,21 @@ export default function RootLayout() {
   const { colors, isDark } = useTheme();
   const initialize = useStore((s) => s.initialize);
   const currentUser = useStore((s) => s.currentUser);
+  const hydrated = useStore((s) => s._hydrated);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (hydrated && !currentUser) {
       initialize();
     }
-  }, [currentUser, initialize]);
+  }, [hydrated, currentUser, initialize]);
+
+  if (!hydrated) {
+    return (
+      <View style={[styles.loading, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <>
@@ -60,3 +70,11 @@ export default function RootLayout() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

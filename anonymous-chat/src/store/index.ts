@@ -1,7 +1,9 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { User, Message, Chat, Status, Call, Contact } from "@/types";
 import { generateId, generateUserId, generateChatId, generateInviteCode } from "@/utils/crypto";
 import { generateAnonymousName } from "@/constants/avatars";
+import { fileStorage } from "@/utils/storage";
 
 interface AppState {
   currentUser: User | null;
@@ -12,6 +14,7 @@ interface AppState {
   calls: Call[];
   contacts: Record<string, Contact>;
   searchQuery: string;
+  _hydrated: boolean;
 
   initialize: () => void;
   updateProfile: (updates: Partial<User>) => void;
@@ -229,7 +232,9 @@ function createDemoData(currentUserId: string): {
   return { users, chats, messages, contacts, statuses, calls };
 }
 
-export const useStore = create<AppState>((set, get) => ({
+export const useStore = create<AppState>()(
+  persist(
+    (set, get) => ({
   currentUser: null,
   users: {},
   chats: {},
@@ -238,8 +243,11 @@ export const useStore = create<AppState>((set, get) => ({
   calls: [],
   contacts: {},
   searchQuery: "",
+  _hydrated: false,
 
   initialize: () => {
+    if (get().currentUser) return;
+
     const userId = generateUserId();
     const name = generateAnonymousName();
     const currentUser: User = {
@@ -658,4 +666,22 @@ export const useStore = create<AppState>((set, get) => ({
       };
     });
   },
-}));
+    }),
+    {
+      name: "anonymous-chat-store",
+      storage: createJSONStorage(() => fileStorage),
+      partialize: (state) => ({
+        currentUser: state.currentUser,
+        users: state.users,
+        chats: state.chats,
+        messages: state.messages,
+        contacts: state.contacts,
+        calls: state.calls,
+        statuses: state.statuses,
+      }),
+      onRehydrateStorage: () => () => {
+        useStore.setState({ _hydrated: true });
+      },
+    },
+  ),
+);
