@@ -9,9 +9,10 @@ import { Ionicons } from "@expo/vector-icons";
 
 interface ChatListItemProps {
   chat: Chat;
+  onLongPress?: (chat: Chat) => void;
 }
 
-export function ChatListItem({ chat }: ChatListItemProps) {
+export function ChatListItem({ chat, onLongPress }: ChatListItemProps) {
   const { colors } = useTheme();
   const currentUser = useStore((s) => s.currentUser);
   const users = useStore((s) => s.users);
@@ -78,6 +79,8 @@ export function ChatListItem({ chat }: ChatListItemProps) {
         { backgroundColor: pressed ? colors.surfaceVariant : "transparent" },
       ]}
       onPress={() => router.push(`/chat/${chat.id}`)}
+      onLongPress={() => onLongPress?.(chat)}
+      delayLongPress={400}
     >
       <Avatar
         id={chatId}

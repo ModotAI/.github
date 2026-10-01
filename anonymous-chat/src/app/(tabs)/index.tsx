@@ -1,10 +1,13 @@
 import { View, Text, FlatList, StyleSheet, Pressable, TextInput } from "react-native";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { useStore } from "@/store";
 import { ChatListItem } from "@/components/ChatListItem";
+import { ChatActions } from "@/components/ChatActions";
+import * as Haptics from "expo-haptics";
+import type { Chat } from "@/types";
 
 export default function ChatsScreen() {
   const { colors } = useTheme();
@@ -14,6 +17,14 @@ export default function ChatsScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
+  const [showActions, setShowActions] = useState(false);
+
+  const handleLongPress = useCallback((chat: Chat) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSelectedChat(chat);
+    setShowActions(true);
+  }, []);
 
   const sortedChats = useMemo(() => {
     let chatList = Object.values(chats).filter(
@@ -65,7 +76,7 @@ export default function ChatsScreen() {
       <FlatList
         data={sortedChats}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ChatListItem chat={item} />}
+        renderItem={({ item }) => <ChatListItem chat={item} onLongPress={handleLongPress} />}
         ListHeaderComponent={
           !showArchived && archivedCount > 0 ? (
             <Pressable
@@ -123,6 +134,15 @@ export default function ChatsScreen() {
           <Ionicons name="search" size={20} color={colors.primary} />
         </Pressable>
       )}
+
+      <ChatActions
+        chat={selectedChat}
+        visible={showActions}
+        onClose={() => {
+          setShowActions(false);
+          setSelectedChat(null);
+        }}
+      />
     </View>
   );
 }
