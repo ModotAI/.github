@@ -68,19 +68,21 @@ export default function ChatsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {showSearch && (
-        <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
-          <Ionicons name="search" size={18} color={colors.textMuted} />
-          <TextInput
-            ref={searchInputRef}
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Cerca chat..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          <Pressable onPress={() => { setShowSearch(false); setSearchQuery(""); }}>
-            <Ionicons name="close" size={20} color={colors.textMuted} />
-          </Pressable>
+        <View style={styles.searchWrapper}>
+          <View style={[styles.searchContainer, { backgroundColor: colors.surfaceVariant }]}>
+            <Ionicons name="search" size={18} color={colors.textMuted} />
+            <TextInput
+              ref={searchInputRef}
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Cerca chat..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            <Pressable onPress={() => { setShowSearch(false); setSearchQuery(""); }}>
+              <Ionicons name="close" size={20} color={colors.textMuted} />
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -155,18 +157,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  searchWrapper: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
+    borderRadius: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 4,
+    paddingVertical: 0,
   },
   archivedRow: {
     flexDirection: "row",
@@ -180,13 +186,14 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   emptyContainer: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 80,
     gap: 8,
   },
   emptyList: {
     flexGrow: 1,
+    justifyContent: "center",
   },
   emptyText: {
     fontSize: 18,
