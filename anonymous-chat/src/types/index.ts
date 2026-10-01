@@ -60,18 +60,6 @@ export interface Chat {
 
 export type ChatType = "private" | "group";
 
-export interface Status {
-  id: string;
-  userId: string;
-  type: "text" | "image" | "video";
-  content: string;
-  backgroundColor?: string;
-  caption?: string;
-  viewedBy: string[];
-  createdAt: number;
-  expiresAt: number;
-}
-
 export interface Call {
   id: string;
   type: "voice" | "video";

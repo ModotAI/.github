@@ -1,5 +1,5 @@
 import { View, Text, FlatList, StyleSheet, Pressable, TextInput } from "react-native";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
@@ -19,12 +19,23 @@ export default function ChatsScreen() {
   const [showArchived, setShowArchived] = useState(false);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [showActions, setShowActions] = useState(false);
+  const searchInputRef = useRef<TextInput>(null);
 
   const handleLongPress = useCallback((chat: Chat) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedChat(chat);
     setShowActions(true);
   }, []);
+
+  const handleScroll = useCallback(
+    (e: { nativeEvent: { contentOffset: { y: number } } }) => {
+      if (e.nativeEvent.contentOffset.y < -60 && !showSearch) {
+        setShowSearch(true);
+        setTimeout(() => searchInputRef.current?.focus(), 100);
+      }
+    },
+    [showSearch]
+  );
 
   const sortedChats = useMemo(() => {
     let chatList = Object.values(chats).filter(
@@ -60,12 +71,12 @@ export default function ChatsScreen() {
         <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
           <Ionicons name="search" size={18} color={colors.textMuted} />
           <TextInput
+            ref={searchInputRef}
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search chats..."
+            placeholder="Cerca chat..."
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            autoFocus
           />
           <Pressable onPress={() => { setShowSearch(false); setSearchQuery(""); }}>
             <Ionicons name="close" size={20} color={colors.textMuted} />
@@ -77,6 +88,8 @@ export default function ChatsScreen() {
         data={sortedChats}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <ChatListItem chat={item} onLongPress={handleLongPress} />}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         ListHeaderComponent={
           !showArchived && archivedCount > 0 ? (
             <Pressable
@@ -85,7 +98,7 @@ export default function ChatsScreen() {
             >
               <Ionicons name="archive" size={20} color={colors.primary} />
               <Text style={[styles.archivedText, { color: colors.primary }]}>
-                Archived ({archivedCount})
+                Archiviate ({archivedCount})
               </Text>
             </Pressable>
           ) : showArchived ? (
@@ -95,7 +108,7 @@ export default function ChatsScreen() {
             >
               <Ionicons name="arrow-back" size={20} color={colors.primary} />
               <Text style={[styles.archivedText, { color: colors.primary }]}>
-                Back to Chats
+                Torna alle Chat
               </Text>
             </Pressable>
           ) : null
@@ -104,10 +117,10 @@ export default function ChatsScreen() {
           <View style={styles.emptyContainer}>
             <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              {searchQuery ? "No chats found" : "No chats yet"}
+              {searchQuery ? "Nessuna chat trovata" : "Nessuna chat"}
             </Text>
             <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
-              Tap + to start a conversation
+              Tocca + per iniziare una conversazione
             </Text>
           </View>
         }
@@ -125,15 +138,6 @@ export default function ChatsScreen() {
           <Ionicons name="chatbubble-ellipses" size={24} color="#ffffff" />
         </Pressable>
       </View>
-
-      {!showSearch && (
-        <Pressable
-          style={[styles.searchFab, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => setShowSearch(true)}
-        >
-          <Ionicons name="search" size={20} color={colors.primary} />
-        </Pressable>
-      )}
 
       <ChatActions
         chat={selectedChat}
@@ -208,21 +212,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-  },
-  searchFab: {
-    position: "absolute",
-    bottom: 88,
-    right: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
   },
 });

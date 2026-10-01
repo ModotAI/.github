@@ -33,10 +33,6 @@ const FAQ_ITEMS = [
     a: "I contatti bloccati non potranno inviarti messaggi, chiamarti o vedere il tuo stato online e ultimo accesso. Puoi sbloccarli in qualsiasi momento dalle Impostazioni > Contatti Bloccati.",
   },
   {
-    q: "Come funzionano gli Storie/Status?",
-    a: "Puoi pubblicare uno status testuale o con immagine che sarà visibile ai tuoi contatti per 24 ore. Dopo 24 ore lo status scompare automaticamente.",
-  },
-  {
     q: "Come funzionano le conferme di lettura?",
     a: "Le doppie spunte indicano che il messaggio è stato consegnato. Quando diventano colorate significano che il messaggio è stato letto. Puoi disattivare le conferme di lettura nelle Impostazioni > Privacy.",
   },

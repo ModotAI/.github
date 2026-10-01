@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { User, Message, Chat, Status, Call, Contact, AppSettings } from "@/types";
-import { generateId, generateUserId, generateChatId, generateInviteCode } from "@/utils/crypto";
+import type { User, Message, Chat, Call, Contact, AppSettings } from "@/types";
+import { generateId, generateUserId, generateChatId } from "@/utils/crypto";
 import { generateAnonymousName } from "@/constants/avatars";
 import { fileStorage } from "@/utils/storage";
 
@@ -10,7 +10,6 @@ interface AppState {
   users: Record<string, User>;
   chats: Record<string, Chat>;
   messages: Record<string, Message[]>;
-  statuses: Status[];
   calls: Call[];
   contacts: Record<string, Contact>;
   settings: AppSettings;
@@ -35,10 +34,6 @@ interface AppState {
   reactToMessage: (chatId: string, messageId: string, emoji: string) => void;
   markAsRead: (chatId: string) => void;
 
-  addStatus: (status: Omit<Status, "id" | "userId" | "viewedBy" | "createdAt" | "expiresAt">) => void;
-  viewStatus: (statusId: string) => void;
-  deleteStatus: (statusId: string) => void;
-
   addCall: (call: Omit<Call, "id" | "startedAt">) => void;
   startCall: (userId: string, type: "voice" | "video") => string;
   endCall: (callId: string) => void;
@@ -54,186 +49,6 @@ interface AppState {
   setTyping: (chatId: string, userId: string, isTyping: boolean) => void;
 }
 
-function createDemoData(currentUserId: string): {
-  users: Record<string, User>;
-  chats: Record<string, Chat>;
-  messages: Record<string, Message[]>;
-  contacts: Record<string, Contact>;
-  statuses: Status[];
-  calls: Call[];
-} {
-  const now = Date.now();
-  const demoUsers: User[] = [
-    {
-      id: "demo_1", username: "shadow_fox", displayName: "Shadow Fox",
-      avatar: null, bio: "Living in the shadows", lastSeen: now - 120000,
-      isOnline: true, createdAt: now - 86400000 * 30,
-    },
-    {
-      id: "demo_2", username: "night_owl", displayName: "Night Owl",
-      avatar: null, bio: "Awake when the world sleeps", lastSeen: now - 3600000,
-      isOnline: false, createdAt: now - 86400000 * 20,
-    },
-    {
-      id: "demo_3", username: "storm_wolf", displayName: "Storm Wolf",
-      avatar: null, bio: "Howling at the digital moon", lastSeen: now - 600000,
-      isOnline: true, createdAt: now - 86400000 * 15,
-    },
-    {
-      id: "demo_4", username: "dark_phoenix", displayName: "Dark Phoenix",
-      avatar: null, bio: "Rising from encrypted ashes", lastSeen: now - 7200000,
-      isOnline: false, createdAt: now - 86400000 * 10,
-    },
-    {
-      id: "demo_5", username: "cyber_hawk", displayName: "Cyber Hawk",
-      avatar: null, bio: "Watching from above", lastSeen: now - 300000,
-      isOnline: true, createdAt: now - 86400000 * 5,
-    },
-  ];
-
-  const users: Record<string, User> = {};
-  demoUsers.forEach((u) => { users[u.id] = u; });
-
-  const chats: Record<string, Chat> = {};
-  const messages: Record<string, Message[]> = {};
-  const contacts: Record<string, Contact> = {};
-
-  const chatConfigs = [
-    { other: demoUsers[0], msgs: [
-      { text: "Hey, have you tried the new encryption protocol?", from: "other", ago: 3600000 },
-      { text: "Not yet, is it any good?", from: "me", ago: 3500000 },
-      { text: "It's incredible. Quantum-resistant!", from: "other", ago: 3400000 },
-      { text: "Send me the docs, I'll check it out tonight", from: "me", ago: 3300000 },
-      { text: "Done! Let me know what you think 🔐", from: "other", ago: 3200000 },
-    ]},
-    { other: demoUsers[1], msgs: [
-      { text: "Movie night? 🎬", from: "other", ago: 7200000 },
-      { text: "Sure! What are we watching?", from: "me", ago: 7000000 },
-      { text: "The Matrix, obviously 😎", from: "other", ago: 6800000 },
-    ]},
-    { other: demoUsers[2], msgs: [
-      { text: "The server migration is complete", from: "other", ago: 1800000 },
-      { text: "Any issues?", from: "me", ago: 1700000 },
-      { text: "All green! Zero downtime 🚀", from: "other", ago: 1600000 },
-      { text: "Nice work!", from: "me", ago: 1500000 },
-    ]},
-    { other: demoUsers[3], msgs: [
-      { text: "Can you review my PR?", from: "other", ago: 86400000 },
-      { text: "I'll look at it tomorrow", from: "me", ago: 85000000 },
-    ]},
-    { other: demoUsers[4], msgs: [
-      { text: "Welcome! 👋", from: "other", ago: 172800000 },
-    ]},
-  ];
-
-  chatConfigs.forEach(({ other, msgs }) => {
-    const chatId = generateChatId(currentUserId, other.id);
-    const chatMessages: Message[] = msgs.map((m, i) => ({
-      id: generateId(),
-      chatId,
-      senderId: m.from === "me" ? currentUserId : other.id,
-      text: m.text,
-      type: "text" as const,
-      status: "read" as const,
-      reactions: {},
-      createdAt: now - m.ago,
-      readBy: [currentUserId, other.id],
-    }));
-
-    messages[chatId] = chatMessages;
-    chats[chatId] = {
-      id: chatId,
-      type: "private",
-      participants: [currentUserId, other.id],
-      createdBy: other.id,
-      lastMessage: chatMessages[chatMessages.length - 1],
-      unreadCount: 0,
-      isPinned: false,
-      isMuted: false,
-      isArchived: false,
-      createdAt: now - 86400000,
-      updatedAt: chatMessages[chatMessages.length - 1].createdAt,
-    };
-
-    contacts[other.id] = {
-      userId: other.id,
-      isBlocked: false,
-      isFavorite: false,
-      addedAt: now - 86400000,
-    };
-  });
-
-  const groupChatId = `group_${generateId().slice(0, 8)}`;
-  const groupMsgs: Message[] = [
-    {
-      id: generateId(), chatId: groupChatId, senderId: demoUsers[0].id,
-      text: "Welcome to the Anon Dev Squad! 🎉", type: "text",
-      status: "read", reactions: { "🎉": [demoUsers[1].id, demoUsers[2].id] },
-      createdAt: now - 86400000, readBy: [currentUserId, ...demoUsers.map(u => u.id)],
-    },
-    {
-      id: generateId(), chatId: groupChatId, senderId: demoUsers[2].id,
-      text: "Let's build something amazing together", type: "text",
-      status: "read", reactions: {},
-      createdAt: now - 82800000, readBy: [currentUserId, ...demoUsers.map(u => u.id)],
-    },
-    {
-      id: generateId(), chatId: groupChatId, senderId: currentUserId,
-      text: "I'm in! What's the plan?", type: "text",
-      status: "read", reactions: { "💪": [demoUsers[0].id] },
-      createdAt: now - 79200000, readBy: [currentUserId, ...demoUsers.map(u => u.id)],
-    },
-  ];
-  messages[groupChatId] = groupMsgs;
-  chats[groupChatId] = {
-    id: groupChatId,
-    type: "group",
-    name: "Anon Dev Squad",
-    description: "A group for anonymous developers",
-    participants: [currentUserId, demoUsers[0].id, demoUsers[1].id, demoUsers[2].id],
-    admins: [currentUserId, demoUsers[0].id],
-    createdBy: demoUsers[0].id,
-    lastMessage: groupMsgs[groupMsgs.length - 1],
-    unreadCount: 0,
-    isPinned: true,
-    isMuted: false,
-    isArchived: false,
-    createdAt: now - 86400000,
-    updatedAt: groupMsgs[groupMsgs.length - 1].createdAt,
-  };
-
-  const statuses: Status[] = [
-    {
-      id: generateId(), userId: demoUsers[0].id, type: "text",
-      content: "Coding at 3am... as usual 💻",
-      backgroundColor: "#6c5ce7", viewedBy: [],
-      createdAt: now - 3600000, expiresAt: now + 82800000,
-    },
-    {
-      id: generateId(), userId: demoUsers[2].id, type: "text",
-      content: "Just deployed to production! 🚀",
-      backgroundColor: "#00b894", viewedBy: [],
-      createdAt: now - 7200000, expiresAt: now + 79200000,
-    },
-  ];
-
-  const calls: Call[] = [
-    {
-      id: generateId(), type: "voice", callerId: demoUsers[0].id,
-      participants: [currentUserId, demoUsers[0].id],
-      status: "ended", startedAt: now - 86400000,
-      endedAt: now - 86400000 + 300000, duration: 300,
-    },
-    {
-      id: generateId(), type: "video", callerId: currentUserId,
-      participants: [currentUserId, demoUsers[2].id],
-      status: "missed", startedAt: now - 172800000,
-    },
-  ];
-
-  return { users, chats, messages, contacts, statuses, calls };
-}
-
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -241,7 +56,6 @@ export const useStore = create<AppState>()(
   users: {},
   chats: {},
   messages: {},
-  statuses: [],
   calls: [],
   contacts: {},
   settings: {
@@ -273,16 +87,9 @@ export const useStore = create<AppState>()(
       createdAt: Date.now(),
     };
 
-    const demo = createDemoData(userId);
-
     set({
       currentUser,
-      users: { [userId]: currentUser, ...demo.users },
-      chats: demo.chats,
-      messages: demo.messages,
-      contacts: demo.contacts,
-      statuses: demo.statuses,
-      calls: demo.calls,
+      users: { [userId]: currentUser },
     });
   },
 
@@ -555,38 +362,6 @@ export const useStore = create<AppState>()(
     }));
   },
 
-  addStatus: (statusData) => {
-    const state = get();
-    if (!state.currentUser) return;
-    const status: Status = {
-      ...statusData,
-      id: generateId(),
-      userId: state.currentUser.id,
-      viewedBy: [],
-      createdAt: Date.now(),
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-    };
-    set((s) => ({ statuses: [...s.statuses, status] }));
-  },
-
-  viewStatus: (statusId) => {
-    const state = get();
-    if (!state.currentUser) return;
-    set((s) => ({
-      statuses: s.statuses.map((st) =>
-        st.id === statusId && !st.viewedBy.includes(state.currentUser!.id)
-          ? { ...st, viewedBy: [...st.viewedBy, state.currentUser!.id] }
-          : st
-      ),
-    }));
-  },
-
-  deleteStatus: (statusId) => {
-    set((s) => ({
-      statuses: s.statuses.filter((st) => st.id !== statusId),
-    }));
-  },
-
   addCall: (callData) => {
     const call: Call = {
       ...callData,
@@ -699,7 +474,6 @@ export const useStore = create<AppState>()(
         messages: state.messages,
         contacts: state.contacts,
         calls: state.calls,
-        statuses: state.statuses,
         settings: state.settings,
       }),
       onRehydrateStorage: () => () => {

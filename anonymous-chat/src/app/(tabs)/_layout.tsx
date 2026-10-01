@@ -48,15 +48,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="status"
-        options={{
-          title: "Status",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="radio-button-on" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="calls"
         options={{
           title: "Calls",
