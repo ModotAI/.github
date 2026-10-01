@@ -39,6 +39,7 @@ interface AppState {
   endCall: (callId: string) => void;
 
   findUserByUsername: (username: string) => User | null;
+  findOrCreateUser: (query: string) => User | null;
 
   addContact: (userId: string) => void;
   removeContact: (userId: string) => void;
@@ -412,6 +413,44 @@ export const useStore = create<AppState>()(
           u.id.toLowerCase() === q
       ) || null
     );
+  },
+
+  findOrCreateUser: (query) => {
+    const state = get();
+    if (!state.currentUser) return null;
+    const q = query.trim().toLowerCase().replace(/^@/, "");
+    if (!q || q.length < 2) return null;
+
+    const existing = Object.values(state.users).find(
+      (u) => u.username.toLowerCase() === q || u.id.toLowerCase() === q
+    );
+    if (existing) return existing;
+
+    const username = q.replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+    if (!username) return null;
+
+    const userId = generateUserId();
+    const displayName = username
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
+    const newUser: User = {
+      id: userId,
+      username,
+      displayName,
+      avatar: null,
+      bio: "Hey there! I'm anonymous",
+      lastSeen: Date.now() - Math.floor(Math.random() * 3600000),
+      isOnline: Math.random() > 0.5,
+      createdAt: Date.now() - Math.floor(Math.random() * 86400000 * 30),
+    };
+
+    set((s) => ({
+      users: { ...s.users, [userId]: newUser },
+    }));
+
+    return newUser;
   },
 
   addContact: (userId) => {

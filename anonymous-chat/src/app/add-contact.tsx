@@ -10,17 +10,17 @@ export default function AddContactScreen() {
   const { colors } = useTheme();
   const currentUser = useStore((s) => s.currentUser);
   const contacts = useStore((s) => s.contacts);
-  const findUserByUsername = useStore((s) => s.findUserByUsername);
+  const findOrCreateUser = useStore((s) => s.findOrCreateUser);
   const addContact = useStore((s) => s.addContact);
   const [query, setQuery] = useState("");
-  const [foundUser, setFoundUser] = useState<ReturnType<typeof findUserByUsername>>(null);
+  const [foundUser, setFoundUser] = useState<ReturnType<typeof findOrCreateUser>>(null);
   const [searched, setSearched] = useState(false);
 
   if (!currentUser) return null;
 
   const handleSearch = () => {
     if (!query.trim()) return;
-    const user = findUserByUsername(query.trim());
+    const user = findOrCreateUser(query.trim());
     setFoundUser(user);
     setSearched(true);
   };
