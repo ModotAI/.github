@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ShadowChat",
+    "name": "Anonymous Chat",
     "slug": "shadow-chat",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,9 +12,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.shadowchat.app",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "ShadowChat needs microphone access to send voice messages",
-        "NSCameraUsageDescription": "ShadowChat needs camera access to take photos and videos",
-        "NSPhotoLibraryUsageDescription": "ShadowChat needs photo library access to share images"
+        "NSMicrophoneUsageDescription": "This app needs microphone access to send voice messages and make calls",
+        "NSCameraUsageDescription": "This app needs camera access to take photos and video calls",
+        "NSPhotoLibraryUsageDescription": "This app needs photo library access to share images"
       }
     },
     "android": {
@@ -38,13 +38,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow ShadowChat to access your camera for photos and video calls"
+          "cameraPermission": "Allow this app to access your camera for photos and video calls"
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow ShadowChat to access your photos to share them in chats"
+          "photosPermission": "Allow this app to access your photos to share them in chats"
         }
       ],
       [

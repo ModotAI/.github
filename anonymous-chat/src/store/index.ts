@@ -35,6 +35,10 @@ interface AppState {
   deleteStatus: (statusId: string) => void;
 
   addCall: (call: Omit<Call, "id" | "startedAt">) => void;
+  startCall: (userId: string, type: "voice" | "video") => string;
+  endCall: (callId: string) => void;
+
+  findUserByUsername: (username: string) => User | null;
 
   addContact: (userId: string) => void;
   removeContact: (userId: string) => void;
@@ -113,7 +117,7 @@ function createDemoData(currentUserId: string): {
       { text: "I'll look at it tomorrow", from: "me", ago: 85000000 },
     ]},
     { other: demoUsers[4], msgs: [
-      { text: "Welcome to ShadowChat! 👋", from: "other", ago: 172800000 },
+      { text: "Welcome! 👋", from: "other", ago: 172800000 },
     ]},
   ];
 
@@ -243,7 +247,7 @@ export const useStore = create<AppState>((set, get) => ({
       username: name.toLowerCase().replace(/\s/g, "_"),
       displayName: name,
       avatar: null,
-      bio: "Hey there! I'm using ShadowChat",
+      bio: "Hey there! I'm anonymous",
       lastSeen: Date.now(),
       isOnline: true,
       createdAt: Date.now(),
@@ -560,6 +564,49 @@ export const useStore = create<AppState>((set, get) => ({
       startedAt: Date.now(),
     };
     set((s) => ({ calls: [call, ...s.calls] }));
+  },
+
+  startCall: (userId, type) => {
+    const state = get();
+    if (!state.currentUser) return "";
+    const callId = generateId();
+    const call: Call = {
+      id: callId,
+      type,
+      callerId: state.currentUser.id,
+      participants: [state.currentUser.id, userId],
+      status: "ongoing",
+      startedAt: Date.now(),
+    };
+    set((s) => ({ calls: [call, ...s.calls] }));
+    return callId;
+  },
+
+  endCall: (callId) => {
+    set((s) => ({
+      calls: s.calls.map((c) =>
+        c.id === callId
+          ? {
+              ...c,
+              status: "ended" as const,
+              endedAt: Date.now(),
+              duration: Math.floor((Date.now() - c.startedAt) / 1000),
+            }
+          : c
+      ),
+    }));
+  },
+
+  findUserByUsername: (username) => {
+    const state = get();
+    const q = username.toLowerCase().replace(/^@/, "");
+    return (
+      Object.values(state.users).find(
+        (u) =>
+          u.username.toLowerCase() === q ||
+          u.id.toLowerCase() === q
+      ) || null
+    );
   },
 
   addContact: (userId) => {

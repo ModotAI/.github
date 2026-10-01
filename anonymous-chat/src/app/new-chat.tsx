@@ -59,7 +59,10 @@ export default function NewChatScreen() {
         <Text style={[styles.actionLabel, { color: colors.text }]}>New Group</Text>
       </Pressable>
 
-      <Pressable style={styles.actionRow}>
+      <Pressable
+        style={styles.actionRow}
+        onPress={() => router.push("/add-contact")}
+      >
         <View style={[styles.actionIcon, { backgroundColor: colors.secondary }]}>
           <Ionicons name="person-add" size={22} color="#ffffff" />
         </View>

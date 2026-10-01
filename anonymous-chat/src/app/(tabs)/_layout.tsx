@@ -33,7 +33,6 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Chats",
-          headerTitle: "ShadowChat",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles" size={size} color={color} />
           ),

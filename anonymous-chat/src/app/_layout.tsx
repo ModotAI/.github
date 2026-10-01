@@ -45,6 +45,14 @@ export default function RootLayout() {
           options={{ title: "New Group", presentation: "modal" }}
         />
         <Stack.Screen
+          name="add-contact"
+          options={{ title: "Add Contact", presentation: "modal" }}
+        />
+        <Stack.Screen
+          name="call"
+          options={{ headerShown: false, presentation: "fullScreenModal", animation: "fade" }}
+        />
+        <Stack.Screen
           name="profile"
           options={{ title: "Profile", presentation: "modal" }}
         />

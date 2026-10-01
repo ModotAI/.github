@@ -1,4 +1,6 @@
-import { View, Text, FlatList, StyleSheet, Pressable } from "react-native";
+import { View, Text, FlatList, StyleSheet, Pressable, Modal } from "react-native";
+import { useState, useMemo } from "react";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { useStore } from "@/store";
@@ -10,8 +12,28 @@ export default function CallsScreen() {
   const currentUser = useStore((s) => s.currentUser);
   const calls = useStore((s) => s.calls);
   const users = useStore((s) => s.users);
+  const contacts = useStore((s) => s.contacts);
+  const [showPicker, setShowPicker] = useState(false);
+  const [callType, setCallType] = useState<"voice" | "video">("voice");
+
+  const contactList = useMemo(() => {
+    return Object.values(contacts)
+      .filter((c) => !c.isBlocked)
+      .map((c) => users[c.userId])
+      .filter(Boolean);
+  }, [contacts, users]);
 
   if (!currentUser) return null;
+
+  const startCallTo = (userId: string, type: "voice" | "video") => {
+    setShowPicker(false);
+    router.push({ pathname: "/call", params: { userId, type } });
+  };
+
+  const openPicker = (type: "voice" | "video") => {
+    setCallType(type);
+    setShowPicker(true);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -41,10 +63,9 @@ export default function CallsScreen() {
                 </Text>
                 <View style={styles.callMeta}>
                   <Ionicons
-                    name={isIncoming ? "call-received" : "call-made" as any}
+                    name={isIncoming ? "arrow-down-outline" : "arrow-up-outline"}
                     size={14}
                     color={isMissed ? colors.error : colors.success}
-                    style={{ transform: [{ rotate: isIncoming ? "0deg" : "0deg" }] }}
                   />
                   <Text style={[styles.callMetaText, { color: colors.textSecondary }]}>
                     {formatDate(call.startedAt)} {formatTime(call.startedAt)}
@@ -52,7 +73,10 @@ export default function CallsScreen() {
                   </Text>
                 </View>
               </View>
-              <Pressable style={styles.callAction}>
+              <Pressable
+                style={styles.callAction}
+                onPress={() => startCallTo(otherUserId, call.type)}
+              >
                 <Ionicons
                   name={call.type === "video" ? "videocam" : "call"}
                   size={22}
@@ -66,19 +90,81 @@ export default function CallsScreen() {
           <View style={styles.emptyContainer}>
             <Ionicons name="call-outline" size={64} color={colors.textMuted} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              No calls yet
+              Nessuna chiamata
             </Text>
             <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
-              Your call history will appear here
+              La cronologia delle chiamate apparirà qui
             </Text>
           </View>
         }
         contentContainerStyle={calls.length === 0 ? styles.emptyList : undefined}
       />
 
-      <Pressable style={[styles.fab, { backgroundColor: colors.primary }]}>
-        <Ionicons name="call" size={24} color="#ffffff" />
-      </Pressable>
+      <View style={styles.fabGroup}>
+        <Pressable
+          style={[styles.fabSmall, { backgroundColor: colors.surfaceVariant }]}
+          onPress={() => openPicker("video")}
+        >
+          <Ionicons name="videocam" size={20} color={colors.primary} />
+        </Pressable>
+        <Pressable
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={() => openPicker("voice")}
+        >
+          <Ionicons name="call" size={24} color="#ffffff" />
+        </Pressable>
+      </View>
+
+      <Modal visible={showPicker} transparent animationType="slide">
+        <Pressable style={[styles.modalOverlay, { backgroundColor: colors.overlay }]} onPress={() => setShowPicker(false)}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {callType === "video" ? "Videochiamata" : "Chiamata vocale"}
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+              Seleziona un contatto
+            </Text>
+
+            <FlatList
+              data={contactList}
+              keyExtractor={(item) => item.id}
+              style={styles.modalList}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.contactRow,
+                    pressed && { backgroundColor: colors.surfaceVariant },
+                  ]}
+                  onPress={() => startCallTo(item.id, callType)}
+                >
+                  <Avatar id={item.id} name={item.displayName} size={44} showOnline isOnline={item.isOnline} />
+                  <View style={styles.contactInfo}>
+                    <Text style={[styles.contactName, { color: colors.text }]}>
+                      {item.displayName}
+                    </Text>
+                    <Text style={[styles.contactBio, { color: colors.textSecondary }]} numberOfLines={1}>
+                      @{item.username}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name={callType === "video" ? "videocam" : "call"}
+                    size={20}
+                    color={colors.primary}
+                  />
+                </Pressable>
+              )}
+              ListEmptyComponent={
+                <View style={styles.emptyModalContainer}>
+                  <Text style={[styles.emptyModalText, { color: colors.textMuted }]}>
+                    Nessun contatto. Aggiungi contatti per chiamarli.
+                  </Text>
+                </View>
+              }
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -104,10 +190,26 @@ const styles = StyleSheet.create({
   emptyList: { flexGrow: 1 },
   emptyText: { fontSize: 18, fontWeight: "600", marginTop: 16 },
   emptySubtext: { fontSize: 14 },
-  fab: {
+  fabGroup: {
     position: "absolute",
     bottom: 20,
     right: 20,
+    alignItems: "center",
+    gap: 12,
+  },
+  fabSmall: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  fab: {
     width: 56,
     height: 56,
     borderRadius: 16,
@@ -119,4 +221,47 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
   },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
+    maxHeight: "70%",
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#484f58",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    paddingHorizontal: 20,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    paddingHorizontal: 20,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  modalList: { paddingHorizontal: 4 },
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 12,
+  },
+  contactInfo: { flex: 1 },
+  contactName: { fontSize: 16, fontWeight: "500" },
+  contactBio: { fontSize: 13, marginTop: 2 },
+  emptyModalContainer: { alignItems: "center", paddingVertical: 32 },
+  emptyModalText: { fontSize: 14 },
 });
