@@ -1,9 +1,13 @@
 import { View, StyleSheet, Pressable, Text } from "react-native";
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Audio } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 import { formatDuration } from "@/utils/time";
+
+let Audio: any = null;
+try {
+  Audio = require("expo-av").Audio;
+} catch {}
 
 interface AudioWaveformProps {
   uri?: string;
@@ -24,17 +28,17 @@ export function AudioWaveform({ uri, waveform, duration, isMine }: AudioWaveform
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const soundRef = useRef<any>(null);
   const bars = useRef(generateBars(waveform)).current;
 
   useEffect(() => {
     return () => {
-      soundRef.current?.unloadAsync();
+      soundRef.current?.unloadAsync?.();
     };
   }, []);
 
   const handlePlayPause = useCallback(async () => {
-    if (!uri) return;
+    if (!uri || !Audio) return;
 
     try {
       if (isPlaying && soundRef.current) {
@@ -58,7 +62,7 @@ export function AudioWaveform({ uri, waveform, duration, isMine }: AudioWaveform
       const { sound } = await Audio.Sound.createAsync(
         { uri },
         { shouldPlay: true },
-        (status) => {
+        (status: any) => {
           if (!status.isLoaded) return;
           const dur = status.durationMillis || duration * 1000;
           setProgress(dur > 0 ? status.positionMillis / dur : 0);

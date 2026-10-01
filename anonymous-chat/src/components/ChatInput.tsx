@@ -1,7 +1,10 @@
-import { View, TextInput, StyleSheet, Pressable, Platform, Text, Animated } from "react-native";
+import { View, TextInput, StyleSheet, Pressable, Platform, Text, Animated, Alert } from "react-native";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { Audio } from "expo-av";
+let Audio: any = null;
+try {
+  Audio = require("expo-av").Audio;
+} catch {}
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import type { Message } from "@/types";
@@ -36,7 +39,7 @@ export function ChatInput({
   const [isRecording, setIsRecording] = useState(false);
   const [recordDuration, setRecordDuration] = useState(0);
   const [waveformData, setWaveformData] = useState<number[]>([]);
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  const recordingRef = useRef<any>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -69,6 +72,13 @@ export function ChatInput({
   };
 
   const startRecording = useCallback(async () => {
+    if (!Audio) {
+      Alert.alert(
+        "Non disponibile",
+        "La registrazione vocale richiede un development build. Usa 'npx expo run:ios' o 'eas build'."
+      );
+      return;
+    }
     try {
       const { granted } = await Audio.requestPermissionsAsync();
       if (!granted) return;
