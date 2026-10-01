@@ -90,3 +90,18 @@ export interface Contact {
   isFavorite: boolean;
   addedAt: number;
 }
+
+export type FontSizeOption = "small" | "normal" | "large";
+export type MediaAutoDownload = "always" | "wifi" | "never";
+export type ChatWallpaper = "default" | "dark" | "gradient1" | "gradient2" | "gradient3" | "solid1" | "solid2" | "solid3";
+
+export interface AppSettings {
+  showLastSeen: boolean;
+  readReceipts: boolean;
+  pushNotifications: boolean;
+  messageSound: boolean;
+  fontSize: FontSizeOption;
+  chatWallpaper: ChatWallpaper;
+  mediaAutoDownload: MediaAutoDownload;
+  appLock: boolean;
+}

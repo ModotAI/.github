@@ -64,7 +64,15 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="profile"
-          options={{ title: "Profile", presentation: "modal" }}
+          options={{ title: "Profilo", presentation: "modal" }}
+        />
+        <Stack.Screen
+          name="blocked-contacts"
+          options={{ title: "Contatti Bloccati", presentation: "modal" }}
+        />
+        <Stack.Screen
+          name="help"
+          options={{ title: "Aiuto & FAQ", presentation: "modal" }}
         />
       </Stack>
     </>

@@ -14,9 +14,11 @@ interface MessageBubbleProps {
   onLongPress: (message: Message) => void;
   onReply: (message: Message) => void;
   onImagePress?: (uri: string) => void;
+  fontSize?: number;
+  readReceipts?: boolean;
 }
 
-export function MessageBubble({ message, isGroupChat, onLongPress, onReply, onImagePress }: MessageBubbleProps) {
+export function MessageBubble({ message, isGroupChat, onLongPress, onReply, onImagePress, fontSize = 15, readReceipts = true }: MessageBubbleProps) {
   const { colors } = useTheme();
   const currentUser = useStore((s) => s.currentUser);
   const users = useStore((s) => s.users);
@@ -55,7 +57,7 @@ export function MessageBubble({ message, isGroupChat, onLongPress, onReply, onIm
             <Text style={[styles.time, { color: colors.textMuted }]}>
               {formatTime(message.createdAt)}
             </Text>
-            {isMine && <StatusIcon status={message.status} isMine colors={colors} />}
+            {isMine && <StatusIcon status={message.status} isMine colors={colors} readReceipts={readReceipts} />}
           </View>
         </View>
       </Pressable>
@@ -198,7 +200,7 @@ export function MessageBubble({ message, isGroupChat, onLongPress, onReply, onIm
             )}
 
             {message.text ? (
-              <Text style={[styles.text, { color: isMine ? colors.receivedText : colors.text }]}>
+              <Text style={[styles.text, { color: isMine ? colors.receivedText : colors.text, fontSize }]}>
                 {message.text}
               </Text>
             ) : null}
@@ -214,7 +216,7 @@ export function MessageBubble({ message, isGroupChat, onLongPress, onReply, onIm
           <Text style={[styles.time, { color: isMine ? "#ffffff80" : colors.textMuted }]}>
             {formatTime(message.createdAt)}
           </Text>
-          <StatusIcon status={message.status} isMine={isMine} colors={colors} />
+          <StatusIcon status={message.status} isMine={isMine} colors={colors} readReceipts={readReceipts} />
         </View>
       </View>
 
@@ -243,9 +245,10 @@ export function MessageBubble({ message, isGroupChat, onLongPress, onReply, onIm
   );
 }
 
-function StatusIcon({ status, isMine, colors }: { status: string; isMine: boolean; colors: any }) {
+function StatusIcon({ status, isMine, colors, readReceipts = true }: { status: string; isMine: boolean; colors: any; readReceipts?: boolean }) {
   if (!isMine) return null;
-  if (status === "read") return <Ionicons name="checkmark-done" size={14} color="#ffffff90" />;
+  if (status === "read" && readReceipts) return <Ionicons name="checkmark-done" size={14} color="#ffffff90" />;
+  if (status === "read" && !readReceipts) return <Ionicons name="checkmark-done" size={14} color={isMine ? "#ffffff60" : colors.textMuted} />;
   if (status === "delivered") return <Ionicons name="checkmark-done" size={14} color={isMine ? "#ffffff60" : colors.textMuted} />;
   if (status === "sent") return <Ionicons name="checkmark" size={14} color={isMine ? "#ffffff60" : colors.textMuted} />;
   if (status === "sending") return <Ionicons name="time-outline" size={14} color={isMine ? "#ffffff60" : colors.textMuted} />;

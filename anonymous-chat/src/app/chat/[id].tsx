@@ -26,6 +26,7 @@ import { MessageActions } from "@/components/MessageActions";
 import { AttachmentMenu } from "@/components/AttachmentMenu";
 import { StickerPicker } from "@/components/StickerPicker";
 import { formatLastSeen } from "@/utils/time";
+import { useChatWallpaper, useFontSize } from "@/hooks/useChatSettings";
 import type { Message } from "@/types";
 
 export default function ChatScreen() {
@@ -33,11 +34,14 @@ export default function ChatScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
+  const chatBg = useChatWallpaper();
+  const fontSize = useFontSize();
 
   const currentUser = useStore((s) => s.currentUser);
   const chat = useStore((s) => (id ? s.chats[id] : undefined));
   const messages = useStore((s) => (id ? s.messages[id] || [] : []));
   const users = useStore((s) => s.users);
+  const settings = useStore((s) => s.settings);
   const sendMessage = useStore((s) => s.sendMessage);
   const editMessage = useStore((s) => s.editMessage);
   const deleteMessage = useStore((s) => s.deleteMessage);
@@ -76,10 +80,12 @@ export default function ChatScreen() {
         .map((pid) => (pid === currentUser?.id ? "You" : users[pid]?.displayName || "Unknown"))
         .join(", ");
     }
-    if (otherUser?.isOnline) return "online";
-    if (otherUser?.lastSeen) return `last seen ${formatLastSeen(otherUser.lastSeen)}`;
+    if (settings.showLastSeen) {
+      if (otherUser?.isOnline) return "online";
+      if (otherUser?.lastSeen) return `ultimo accesso ${formatLastSeen(otherUser.lastSeen)}`;
+    }
     return "";
-  }, [chat, isGroup, otherUser, users, currentUser]);
+  }, [chat, isGroup, otherUser, users, currentUser, settings.showLastSeen]);
 
   const scrollToEnd = useCallback(() => {
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
@@ -262,7 +268,7 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.chatBackground }]}
+      style={[styles.container, { backgroundColor: chatBg }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={0}
     >
@@ -313,6 +319,8 @@ export default function ChatScreen() {
             onLongPress={handleLongPress}
             onReply={handleReply}
             onImagePress={(uri) => setViewerImage(uri)}
+            fontSize={fontSize}
+            readReceipts={settings.readReceipts}
           />
         )}
         contentContainerStyle={styles.messageList}

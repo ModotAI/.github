@@ -1,4 +1,14 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch, Alert, Platform } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ScrollView,
+  Switch,
+  Alert,
+  Platform,
+  Modal,
+} from "react-native";
 import { useState } from "react";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,62 +18,117 @@ import { useTheme } from "@/hooks/useTheme";
 import { useStore } from "@/store";
 import { Avatar } from "@/components/Avatar";
 import { generateInviteCode } from "@/utils/crypto";
+import type { FontSizeOption, MediaAutoDownload, ChatWallpaper } from "@/types";
+
+type SettingItem = {
+  icon: string;
+  label: string;
+  subtitle?: string;
+  toggle?: boolean;
+  value?: boolean;
+  onToggle?: (v: boolean) => void;
+  onPress?: () => void;
+};
+
+const FONT_SIZE_OPTIONS: { key: FontSizeOption; label: string; preview: number }[] = [
+  { key: "small", label: "Piccolo", preview: 13 },
+  { key: "normal", label: "Normale", preview: 15 },
+  { key: "large", label: "Grande", preview: 18 },
+];
+
+const AUTO_DOWNLOAD_OPTIONS: { key: MediaAutoDownload; label: string; desc: string }[] = [
+  { key: "always", label: "Sempre", desc: "Scarica con qualsiasi connessione" },
+  { key: "wifi", label: "Solo Wi-Fi", desc: "Scarica solo con connessione Wi-Fi" },
+  { key: "never", label: "Mai", desc: "Non scaricare automaticamente" },
+];
+
+const WALLPAPER_OPTIONS: { key: ChatWallpaper; label: string; color: string; color2?: string }[] = [
+  { key: "default", label: "Predefinito", color: "#ece5dd" },
+  { key: "dark", label: "Scuro", color: "#0a0a0a" },
+  { key: "gradient1", label: "Aurora", color: "#667eea", color2: "#764ba2" },
+  { key: "gradient2", label: "Tramonto", color: "#f093fb", color2: "#f5576c" },
+  { key: "gradient3", label: "Oceano", color: "#4facfe", color2: "#00f2fe" },
+  { key: "solid1", label: "Lilla", color: "#dfe6e9" },
+  { key: "solid2", label: "Menta", color: "#ddffd9" },
+  { key: "solid3", label: "Pesca", color: "#ffecd2" },
+];
 
 export default function SettingsScreen() {
   const { colors } = useTheme();
   const currentUser = useStore((s) => s.currentUser);
-  const [notifications, setNotifications] = useState(true);
-  const [readReceipts, setReadReceipts] = useState(true);
-  const [lastSeen, setLastSeen] = useState(true);
+  const settings = useStore((s) => s.settings);
+  const updateSettings = useStore((s) => s.updateSettings);
+
+  const [showFontPicker, setShowFontPicker] = useState(false);
+  const [showWallpaperPicker, setShowWallpaperPicker] = useState(false);
+  const [showDownloadPicker, setShowDownloadPicker] = useState(false);
 
   if (!currentUser) return null;
 
   const inviteCode = generateInviteCode();
+  const fontLabel = FONT_SIZE_OPTIONS.find((f) => f.key === settings.fontSize)?.label || "Normale";
+  const downloadLabel = AUTO_DOWNLOAD_OPTIONS.find((d) => d.key === settings.mediaAutoDownload)?.label || "Solo Wi-Fi";
 
-  const sections = [
+  const sections: { title: string; items: SettingItem[] }[] = [
     {
       title: "Privacy",
       items: [
         {
           icon: "eye-off",
-          label: "Last Seen",
+          label: "Ultimo accesso",
           toggle: true,
-          value: lastSeen,
-          onToggle: setLastSeen,
+          value: settings.showLastSeen,
+          onToggle: (v: boolean) => updateSettings({ showLastSeen: v }),
         },
         {
           icon: "checkmark-done",
-          label: "Read Receipts",
+          label: "Conferme di lettura",
           toggle: true,
-          value: readReceipts,
-          onToggle: setReadReceipts,
+          value: settings.readReceipts,
+          onToggle: (v: boolean) => updateSettings({ readReceipts: v }),
         },
         {
           icon: "lock-closed",
-          label: "Blocked Contacts",
-          onPress: () => {},
+          label: "Contatti bloccati",
+          onPress: () => router.push("/blocked-contacts"),
         },
         {
           icon: "finger-print",
-          label: "App Lock",
-          onPress: () => {},
+          label: "Blocco app",
+          toggle: true,
+          value: settings.appLock,
+          onToggle: (v: boolean) => {
+            updateSettings({ appLock: v });
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            if (v) {
+              Alert.alert(
+                "Blocco app attivato",
+                "L'app richiederà l'autenticazione biometrica o PIN all'apertura."
+              );
+            }
+          },
         },
       ],
     },
     {
-      title: "Notifications",
+      title: "Notifiche",
       items: [
         {
           icon: "notifications",
-          label: "Push Notifications",
+          label: "Notifiche push",
           toggle: true,
-          value: notifications,
-          onToggle: setNotifications,
+          value: settings.pushNotifications,
+          onToggle: (v: boolean) => updateSettings({ pushNotifications: v }),
         },
         {
           icon: "musical-notes",
-          label: "Message Sound",
-          onPress: () => {},
+          label: "Suono messaggi",
+          toggle: true,
+          value: settings.messageSound,
+          onToggle: (v: boolean) => {
+            updateSettings({ messageSound: v });
+            if (v) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          },
         },
       ],
     },
@@ -72,35 +137,40 @@ export default function SettingsScreen() {
       items: [
         {
           icon: "image",
-          label: "Chat Wallpaper",
-          onPress: () => {},
+          label: "Sfondo chat",
+          onPress: () => setShowWallpaperPicker(true),
         },
         {
           icon: "text",
-          label: "Font Size",
-          onPress: () => {},
+          label: "Dimensione testo",
+          subtitle: fontLabel,
+          onPress: () => setShowFontPicker(true),
         },
         {
           icon: "cloud-download",
-          label: "Media Auto-Download",
-          onPress: () => {},
+          label: "Download automatico",
+          subtitle: downloadLabel,
+          onPress: () => setShowDownloadPicker(true),
         },
       ],
     },
     {
-      title: "About",
+      title: "Info",
       items: [
         {
           icon: "share-social",
-          label: `Invite Code: ${inviteCode}`,
-          onPress: () => {
-            Alert.alert("Invite Code", `Share this code: ${inviteCode}`);
+          label: "Codice invito",
+          subtitle: inviteCode,
+          onPress: async () => {
+            await Clipboard.setStringAsync(inviteCode);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert("Copiato!", `Codice invito copiato: ${inviteCode}`);
           },
         },
         {
           icon: "help-circle",
-          label: "Help & FAQ",
-          onPress: () => {},
+          label: "Aiuto & FAQ",
+          onPress: () => router.push("/help"),
         },
         {
           icon: "information-circle",
@@ -179,9 +249,16 @@ export default function SettingsScreen() {
                   color={colors.primary}
                   style={styles.settingIcon}
                 />
-                <Text style={[styles.settingLabel, { color: colors.text }]}>
-                  {item.label}
-                </Text>
+                <View style={styles.settingLabelContainer}>
+                  <Text style={[styles.settingLabel, { color: colors.text }]}>
+                    {item.label}
+                  </Text>
+                  {"subtitle" in item && item.subtitle ? (
+                    <Text style={[styles.settingSubtitle, { color: colors.textMuted }]}>
+                      {item.subtitle}
+                    </Text>
+                  ) : null}
+                </View>
                 {item.toggle ? (
                   <Switch
                     value={item.value}
@@ -202,10 +279,10 @@ export default function SettingsScreen() {
         style={[styles.dangerButton, { borderColor: colors.error }]}
         onPress={() => {
           Alert.alert(
-            "Reset Identity",
-            "This will generate a new anonymous identity. All your data will remain but your ID will change. Continue?",
+            "Reset Identità",
+            "Verrà generata una nuova identità anonima. I tuoi dati resteranno ma il tuo ID cambierà. Continuare?",
             [
-              { text: "Cancel", style: "cancel" },
+              { text: "Annulla", style: "cancel" },
               {
                 text: "Reset",
                 style: "destructive",
@@ -217,12 +294,126 @@ export default function SettingsScreen() {
       >
         <Ionicons name="refresh" size={20} color={colors.error} />
         <Text style={[styles.dangerText, { color: colors.error }]}>
-          Reset Anonymous Identity
+          Reset Identità Anonima
         </Text>
       </Pressable>
 
       <View style={{ height: 40 }} />
+
+      {/* Font Size Picker */}
+      <OptionPickerModal
+        visible={showFontPicker}
+        onClose={() => setShowFontPicker(false)}
+        title="Dimensione testo"
+        colors={colors}
+      >
+        {FONT_SIZE_OPTIONS.map((opt) => (
+          <Pressable
+            key={opt.key}
+            style={[styles.optionRow, { borderBottomColor: colors.border }]}
+            onPress={() => {
+              updateSettings({ fontSize: opt.key });
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowFontPicker(false);
+            }}
+          >
+            <Text style={{ color: colors.text, fontSize: opt.preview }}>{opt.label}</Text>
+            <Text style={[styles.optionPreview, { color: colors.textMuted, fontSize: opt.preview }]}>
+              Anteprima testo
+            </Text>
+            {settings.fontSize === opt.key && (
+              <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+            )}
+          </Pressable>
+        ))}
+      </OptionPickerModal>
+
+      {/* Wallpaper Picker */}
+      <OptionPickerModal
+        visible={showWallpaperPicker}
+        onClose={() => setShowWallpaperPicker(false)}
+        title="Sfondo chat"
+        colors={colors}
+      >
+        <View style={styles.wallpaperGrid}>
+          {WALLPAPER_OPTIONS.map((opt) => (
+            <Pressable
+              key={opt.key}
+              style={[
+                styles.wallpaperItem,
+                settings.chatWallpaper === opt.key && { borderColor: colors.primary, borderWidth: 3 },
+              ]}
+              onPress={() => {
+                updateSettings({ chatWallpaper: opt.key });
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowWallpaperPicker(false);
+              }}
+            >
+              <View style={[styles.wallpaperPreview, { backgroundColor: opt.color }]}>
+                {settings.chatWallpaper === opt.key && (
+                  <Ionicons name="checkmark-circle" size={24} color="#ffffff" />
+                )}
+              </View>
+              <Text style={[styles.wallpaperLabel, { color: colors.text }]}>{opt.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </OptionPickerModal>
+
+      {/* Auto-Download Picker */}
+      <OptionPickerModal
+        visible={showDownloadPicker}
+        onClose={() => setShowDownloadPicker(false)}
+        title="Download automatico media"
+        colors={colors}
+      >
+        {AUTO_DOWNLOAD_OPTIONS.map((opt) => (
+          <Pressable
+            key={opt.key}
+            style={[styles.optionRow, { borderBottomColor: colors.border }]}
+            onPress={() => {
+              updateSettings({ mediaAutoDownload: opt.key });
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowDownloadPicker(false);
+            }}
+          >
+            <View style={styles.optionInfo}>
+              <Text style={[styles.optionLabel, { color: colors.text }]}>{opt.label}</Text>
+              <Text style={[styles.optionDesc, { color: colors.textMuted }]}>{opt.desc}</Text>
+            </View>
+            {settings.mediaAutoDownload === opt.key && (
+              <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+            )}
+          </Pressable>
+        ))}
+      </OptionPickerModal>
     </ScrollView>
+  );
+}
+
+function OptionPickerModal({
+  visible,
+  onClose,
+  title,
+  colors,
+  children,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  title: string;
+  colors: any;
+  children: React.ReactNode;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={onClose}>
+        <Pressable style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
+          <View style={styles.modalHandle} />
+          <Text style={[styles.modalTitle, { color: colors.text }]}>{title}</Text>
+          {children}
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -257,7 +448,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   settingIcon: { marginRight: 12 },
-  settingLabel: { flex: 1, fontSize: 16 },
+  settingLabelContainer: { flex: 1 },
+  settingLabel: { fontSize: 16 },
+  settingSubtitle: { fontSize: 12, marginTop: 2 },
   copyIdRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -274,14 +467,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  copyIdInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  copyIdLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
+  copyIdInfo: { flex: 1, gap: 2 },
+  copyIdLabel: { fontSize: 12, fontWeight: "500" },
   copyIdValue: {
     fontSize: 14,
     fontWeight: "600",
@@ -299,4 +486,60 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   dangerText: { fontSize: 16, fontWeight: "600" },
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
+  modalSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
+    paddingHorizontal: 16,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#484f58",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 16,
+    textAlign: "center",
+  },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 12,
+  },
+  optionPreview: { flex: 1, textAlign: "right" },
+  optionInfo: { flex: 1 },
+  optionLabel: { fontSize: 16, fontWeight: "500" },
+  optionDesc: { fontSize: 12, marginTop: 2 },
+  wallpaperGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    justifyContent: "center",
+    paddingVertical: 8,
+  },
+  wallpaperItem: {
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "transparent",
+    padding: 4,
+  },
+  wallpaperPreview: {
+    width: 64,
+    height: 96,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  wallpaperLabel: { fontSize: 11, fontWeight: "500" },
 });

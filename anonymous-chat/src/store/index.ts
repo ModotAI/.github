@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { User, Message, Chat, Status, Call, Contact } from "@/types";
+import type { User, Message, Chat, Status, Call, Contact, AppSettings } from "@/types";
 import { generateId, generateUserId, generateChatId, generateInviteCode } from "@/utils/crypto";
 import { generateAnonymousName } from "@/constants/avatars";
 import { fileStorage } from "@/utils/storage";
@@ -13,11 +13,13 @@ interface AppState {
   statuses: Status[];
   calls: Call[];
   contacts: Record<string, Contact>;
+  settings: AppSettings;
   searchQuery: string;
   _hydrated: boolean;
 
   initialize: () => void;
   updateProfile: (updates: Partial<User>) => void;
+  updateSettings: (updates: Partial<AppSettings>) => void;
 
   createPrivateChat: (otherUserId: string) => string;
   createGroupChat: (name: string, participantIds: string[]) => string;
@@ -242,6 +244,16 @@ export const useStore = create<AppState>()(
   statuses: [],
   calls: [],
   contacts: {},
+  settings: {
+    showLastSeen: true,
+    readReceipts: true,
+    pushNotifications: true,
+    messageSound: true,
+    fontSize: "normal",
+    chatWallpaper: "default",
+    mediaAutoDownload: "wifi",
+    appLock: false,
+  },
   searchQuery: "",
   _hydrated: false,
 
@@ -283,6 +295,10 @@ export const useStore = create<AppState>()(
         users: { ...state.users, [updated.id]: updated },
       };
     });
+  },
+
+  updateSettings: (updates) => {
+    set((s) => ({ settings: { ...s.settings, ...updates } }));
   },
 
   createPrivateChat: (otherUserId) => {
@@ -684,6 +700,7 @@ export const useStore = create<AppState>()(
         contacts: state.contacts,
         calls: state.calls,
         statuses: state.statuses,
+        settings: state.settings,
       }),
       onRehydrateStorage: () => () => {
         useStore.setState({ _hydrated: true });
