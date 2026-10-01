@@ -1,13 +1,9 @@
 import { View, StyleSheet, Pressable, Text } from "react-native";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useRef, useCallback } from "react";
 import { Ionicons } from "@expo/vector-icons";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { useTheme } from "@/hooks/useTheme";
 import { formatDuration } from "@/utils/time";
-
-let Audio: any = null;
-try {
-  Audio = require("expo-av").Audio;
-} catch {}
 
 interface AudioWaveformProps {
   uri?: string;
@@ -25,59 +21,27 @@ function generateBars(waveform?: number[]): number[] {
 
 export function AudioWaveform({ uri, waveform, duration, isMine }: AudioWaveformProps) {
   const { colors } = useTheme();
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const soundRef = useRef<any>(null);
+  const player = useAudioPlayer(uri ?? null);
+  const status = useAudioPlayerStatus(player);
   const bars = useRef(generateBars(waveform)).current;
 
-  useEffect(() => {
-    return () => {
-      soundRef.current?.unloadAsync?.();
-    };
-  }, []);
+  const isPlaying = status.playing;
+  const progress = status.duration > 0 ? status.currentTime / status.duration : 0;
+  const currentTime = Math.floor(status.currentTime);
 
   const handlePlayPause = useCallback(async () => {
-    if (!uri || !Audio) return;
+    if (!uri) return;
 
-    try {
-      if (isPlaying && soundRef.current) {
-        await soundRef.current.pauseAsync();
-        setIsPlaying(false);
-        return;
-      }
+    if (isPlaying) {
+      player.pause();
+      return;
+    }
 
-      if (soundRef.current) {
-        const status = await soundRef.current.getStatusAsync();
-        if (status.isLoaded) {
-          if (status.didJustFinish || status.positionMillis >= (status.durationMillis || 0)) {
-            await soundRef.current.setPositionAsync(0);
-          }
-          await soundRef.current.playAsync();
-          setIsPlaying(true);
-          return;
-        }
-      }
-
-      const { sound } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: true },
-        (status: any) => {
-          if (!status.isLoaded) return;
-          const dur = status.durationMillis || duration * 1000;
-          setProgress(dur > 0 ? status.positionMillis / dur : 0);
-          setCurrentTime(Math.floor(status.positionMillis / 1000));
-          if (status.didJustFinish) {
-            setIsPlaying(false);
-            setProgress(0);
-            setCurrentTime(0);
-          }
-        }
-      );
-      soundRef.current = sound;
-      setIsPlaying(true);
-    } catch {}
-  }, [uri, isPlaying, duration]);
+    if (status.currentTime >= status.duration && status.duration > 0) {
+      await player.seekTo(0);
+    }
+    player.play();
+  }, [uri, isPlaying, player, status.currentTime, status.duration]);
 
   const activeColor = isMine ? "#ffffff" : colors.primary;
   const inactiveColor = isMine ? "rgba(255,255,255,0.3)" : colors.surfaceVariant;

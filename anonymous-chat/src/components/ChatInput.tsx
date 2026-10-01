@@ -1,10 +1,13 @@
 import { View, TextInput, StyleSheet, Pressable, Platform, Text, Animated, Alert } from "react-native";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Ionicons } from "@expo/vector-icons";
-let Audio: any = null;
-try {
-  Audio = require("expo-av").Audio;
-} catch {}
+import {
+  useAudioRecorder,
+  useAudioRecorderState,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from "expo-audio";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import type { Message } from "@/types";
@@ -37,11 +40,11 @@ export function ChatInput({
   const inputRef = useRef<TextInput>(null);
 
   const [isRecording, setIsRecording] = useState(false);
-  const [recordDuration, setRecordDuration] = useState(0);
   const [waveformData, setWaveformData] = useState<number[]>([]);
-  const recordingRef = useRef<any>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder, 100);
 
   useEffect(() => {
     if (editingMessage) setText(editingMessage.text);
@@ -60,6 +63,13 @@ export function ChatInput({
     }
   }, [isRecording, pulseAnim]);
 
+  useEffect(() => {
+    if (isRecording && recorderState.metering !== undefined) {
+      const normalized = Math.max(0, Math.min(1, (recorderState.metering + 60) / 60));
+      setWaveformData((prev) => [...prev, normalized]);
+    }
+  }, [isRecording, recorderState.metering]);
+
   const handleSend = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -72,70 +82,32 @@ export function ChatInput({
   };
 
   const startRecording = useCallback(async () => {
-    if (!Audio) {
-      Alert.alert(
-        "Non disponibile",
-        "La registrazione vocale richiede un development build. Usa 'npx expo run:ios' o 'eas build'."
-      );
-      return;
-    }
     try {
-      const { granted } = await Audio.requestPermissionsAsync();
+      const { granted } = await requestRecordingPermissionsAsync();
       if (!granted) return;
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       });
 
-      const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync({
-        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
-        isMeteringEnabled: true,
-      });
-      await recording.startAsync();
-      recordingRef.current = recording;
+      await recorder.prepareToRecordAsync();
+      recorder.record();
       setIsRecording(true);
-      setRecordDuration(0);
       setWaveformData([]);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      timerRef.current = setInterval(async () => {
-        setRecordDuration((d) => d + 1);
-        try {
-          const status = await recording.getStatusAsync();
-          if (status.isRecording && status.metering !== undefined) {
-            const normalized = Math.max(0, Math.min(1, (status.metering + 60) / 60));
-            setWaveformData((prev) => [...prev, normalized]);
-          }
-        } catch {}
-      }, 100);
     } catch {}
-  }, []);
+  }, [recorder]);
 
   const stopRecording = useCallback(async (send: boolean) => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    const recording = recordingRef.current;
-    if (!recording) {
-      setIsRecording(false);
-      return;
-    }
-
     try {
-      const status = await recording.getStatusAsync();
-      if (status.isRecording) {
-        await recording.stopAndUnloadAsync();
-      }
+      await recorder.stop();
 
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
+      await setAudioModeAsync({ allowsRecording: false });
 
       if (send) {
-        const uri = recording.getURI();
-        const durationSec = Math.floor((status.durationMillis || 0) / 1000);
+        const uri = recorder.uri;
+        const durationSec = Math.floor(recorderState.durationMillis / 1000);
         if (uri && durationSec > 0) {
           const sampled = sampleWaveform(waveformData, 32);
           onVoice(uri, durationSec, sampled);
@@ -146,13 +118,14 @@ export function ChatInput({
       }
     } catch {}
 
-    recordingRef.current = null;
     setIsRecording(false);
-    setRecordDuration(0);
     setWaveformData([]);
-  }, [onVoice, waveformData]);
+  }, [recorder, recorderState.durationMillis, onVoice, waveformData]);
 
   const hasText = text.trim().length > 0;
+  const displayDuration = Math.floor(recorderState.durationMillis / 1000);
+  const minutes = Math.floor(displayDuration / 60);
+  const seconds = displayDuration % 60;
 
   if (isRecording) {
     return (
@@ -165,7 +138,7 @@ export function ChatInput({
           <View style={styles.recordingCenter}>
             <Animated.View style={[styles.recordDot, { transform: [{ scale: pulseAnim }] }]} />
             <Text style={[styles.recordTime, { color: colors.text }]}>
-              {Math.floor(recordDuration / 10)}:{(recordDuration % 10).toString().padStart(1, "0")}
+              {minutes}:{seconds.toString().padStart(2, "0")}
             </Text>
             <View style={styles.miniWave}>
               {waveformData.slice(-30).map((v, i) => (
@@ -345,7 +318,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     fontVariant: ["tabular-nums"],
-    minWidth: 32,
+    minWidth: 40,
   },
   miniWave: {
     flex: 1,

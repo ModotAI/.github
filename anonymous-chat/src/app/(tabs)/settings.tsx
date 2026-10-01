@@ -1,7 +1,9 @@
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Switch, Alert, Platform } from "react-native";
 import { useState } from "react";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
 import { useTheme } from "@/hooks/useTheme";
 import { useStore } from "@/store";
 import { Avatar } from "@/components/Avatar";
@@ -102,11 +104,11 @@ export default function SettingsScreen() {
         },
         {
           icon: "information-circle",
-          label: "About ShadowChat",
+          label: "Informazioni",
           onPress: () => {
             Alert.alert(
-              "ShadowChat",
-              "Anonymous messaging platform\nVersion 1.0.0\n\nBuilt with Expo SDK 57"
+              "Anonymous Chat",
+              "Piattaforma di messaggistica anonima\nVersione 1.0.0\n\nRealizzata con Expo SDK 57"
             );
           },
         },
@@ -130,6 +132,26 @@ export default function SettingsScreen() {
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      </Pressable>
+
+      <Pressable
+        style={[styles.copyIdRow, { backgroundColor: colors.surface }]}
+        onPress={async () => {
+          await Clipboard.setStringAsync(currentUser.id);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          Alert.alert("Copiato!", "Il tuo ID anonimo è stato copiato negli appunti. Condividilo per farti trovare.");
+        }}
+      >
+        <View style={[styles.copyIdIcon, { backgroundColor: colors.primaryLight }]}>
+          <Ionicons name="finger-print" size={22} color={colors.primary} />
+        </View>
+        <View style={styles.copyIdInfo}>
+          <Text style={[styles.copyIdLabel, { color: colors.textSecondary }]}>Il tuo ID anonimo</Text>
+          <Text style={[styles.copyIdValue, { color: colors.text }]} numberOfLines={1}>
+            {currentUser.id}
+          </Text>
+        </View>
+        <Ionicons name="copy-outline" size={20} color={colors.primary} />
       </Pressable>
 
       {sections.map((section) => (
@@ -236,6 +258,35 @@ const styles = StyleSheet.create({
   },
   settingIcon: { marginRight: 12 },
   settingLabel: { flex: 1, fontSize: 16 },
+  copyIdRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 12,
+    gap: 12,
+  },
+  copyIdIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  copyIdInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  copyIdLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  copyIdValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+  },
   dangerButton: {
     flexDirection: "row",
     alignItems: "center",
