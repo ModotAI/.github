@@ -18,6 +18,12 @@ export interface Message {
   mediaUrl?: string;
   mediaThumbnail?: string;
   mediaDuration?: number;
+  mediaWidth?: number;
+  mediaHeight?: number;
+  waveform?: number[];
+  fileName?: string;
+  fileSize?: number;
+  sticker?: string;
   replyTo?: string;
   forwarded?: boolean;
   status: MessageStatus;
